@@ -1,0 +1,130 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<script type="text/javascript" src="http://localhost:7890/client.js"></script>
+		<script type="text/javascript" src="jquery.js"></script>
+		<link rel="stylesheet" href="bootstrap.css" />
+		<title>DRONEVISION</title>
+		<style>
+		body {
+			width: 640px;
+			margin: 0 auto;
+		}
+		h1 {text-align: center;}
+		img {display:block; margin: 0 auto;}
+		.btn-group {
+			margin: 5px;
+		}
+		.video {
+			position: relative;
+		}
+		.face {
+			display: none;
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 50px;
+			height: 50px;
+			background: rgba(0,0,0,0.5);
+			border-radius: 3px;
+		}
+		</style>
+	</head>
+	<body>
+		<h1>DroneControl<sup>TM</sup> &amp; DroneVision<sup>&reg;</sup></h1>
+		<div class="video">
+			<div class="face"></div>
+			<img class="thumbnail" id="photo" src="http://localhost:8000" width="640px" />
+		</div>
+
+		<br />
+		<p> Battery Level: <span class="battery badge badge-success">100</span></div>
+		<br />
+		<br />
+
+		<div class="btn-group">
+		  <button class="takeoff btn btn-primary"><i class="icon-plane icon-white"></i> Takeoff</button>
+		  <button class="land btn btn-danger"><i class="icon-hand-down icon-white"></i> Land</button>
+		</div>
+
+		<div class="btn-group control">
+		  <button class="left btn">Left</button>
+		  <button class="front btn">Front</button>
+		  <button class="back btn">Back</button>
+		  <button class="right btn">Right</button>
+		</div>
+
+		<div class="btn-group control">
+		  <button class="up btn">Up</button>
+		  <button class="clockwise btn">Clockwise</button>
+		  <button class="counterClockwise btn">Counterclockwise</button>
+		  <button class="down btn">Down</button>
+		</div>
+
+		<br>
+
+		<div class="alert">
+			Heads up! You can use <b>WASD</b> and the <b>Arrow</b> keys as a twin stick control. But be careful, it's <b>EXPERIMENTALISIC</b>
+		</div>
+		
+		<script>
+			var client = new Faye.Client('http://localhost:7890/client');
+			client.subscribe('/drone', function(d) {
+				photo.src = d.image;
+			});
+
+			client.subscribe('/navdata', function(d){
+
+				if(d.demo.batteryPercentage < 30){
+					$('.battery').removeClass('badge-success').addClass('badge-important');
+				}
+
+				$('.battery').text(d.demo.batteryPercentage)
+			})
+
+			client.subscribe('/drone/face', function(d){
+				$('.face').css('width', d.width)
+				$('.face').css('height', d.width)
+				$('.face').css('top', d.y)
+				$('.face').css('left', d.x)
+				
+				$('.face').fadeIn();
+
+				setTimeout(function(){
+					$('.face').fadeOut();
+				}, 500);
+			});
+
+			//Button Control
+			$('.takeoff').on('click', function(){
+				console.log("takeoff")
+				client.publish('/drone/takeoff', {command: "takeoff"});
+			});
+			$('.land').on('click', function(){
+				console.log("land");
+				client.publish('/drone/land', {command: "land"});
+			});
+
+			$('.control .btn').on('click', function(){
+				var command = $(this).attr('class').split(' ')[0];
+
+				console.log( command );
+
+				client.publish('/drone/control', {
+					command: command,
+					speed: 0.2
+				});
+
+				setTimeout(function(){
+					console.log("stop");
+					client.publish('/drone/stop', {command: "stop"});
+				}, 1000);
+			});
+
+			//Keycontrols
+			//TODO: Bind them.
+
+		</script>
+	</body>
+</html>
